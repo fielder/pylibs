@@ -1,5 +1,3 @@
-#FIXME: interept window's close X button clicked and prompt for save
-
 import os
 
 from PyQt4 import QtCore
@@ -50,9 +48,10 @@ class DocBase(object):
         raise NotImplementedError("subclasses should implement")
 
 
-def getController(app_name, win, doc_class):
+def getController(*args):
     global _cont
     if _cont is None:
+        app_name, win, doc_class = args
         _cont = _Cont(app_name, win, doc_class)
     return _cont
 _cont = None
@@ -117,7 +116,11 @@ class _Cont(QtCore.QObject):
         self._last_path = ""
         self.doc = self._doc_class()
 
-        self._attachMenuSignals()
+        self._setupMenu()
+
+        self._win.installEventFilter(self)
+
+        self.newDoc()
 
     def newDoc(self):
         """
@@ -164,7 +167,18 @@ class _Cont(QtCore.QObject):
                     if aname == act_name:
                         return a
 
-    def _attachMenuSignals(self):
+        raise LookupError("no action \"%s\" in \"%s\" menu" % (act_name, menu_name))
+
+    def _setupMenu(self):
+
+        m = self._win.menuBar().addMenu("&File")
+        m.addAction("&New").setShortcut(QtGui.QKeySequence.New)
+        m.addAction("&Open").setShortcut(QtGui.QKeySequence.Open)
+        m.addAction("&Save").setShortcut(QtGui.QKeySequence.Save)
+        m.addAction("Save &As").setShortcut(QtGui.QKeySequence.SaveAs)
+        m.addSeparator()
+        m.addAction("E&xit").setShortcut(QtGui.QKeySequence.Quit)
+
         att = { ("file", "new"):     self._doNew,
                 ("file", "open"):    self._doOpen,
                 ("file", "save"):    self._doSave,
@@ -214,11 +228,24 @@ class _Cont(QtCore.QObject):
 
         return True
 
+    def eventFilter(self, obj, event):
+        if obj == self._win and isinstance(event, QtGui.QCloseEvent):
+            if self._continueWithDestructiveChange():
+                #NOTE: It would seem that closeAllWindows() would end up
+                #      recursing into here, but it doesn't happen...
+                QtGui.QApplication.instance().closeAllWindows()
+                return False
+            else:
+                event.setAccepted(False)
+                return True
+
+        return super(_Cont, self).eventFilter(obj, event)
+
     def _doExit(self):
         if not self._continueWithDestructiveChange():
             return False
         else:
-            self._win.close()
+            QtGui.QApplication.instance().quit()
             return True
 
     def _continueWithDestructiveChange(self):
