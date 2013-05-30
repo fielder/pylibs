@@ -82,6 +82,7 @@ class Wad(object):
     def __init__(self, path=""):
         self.lumps = []
         self.lump_name_to_num = {}
+        self.lump_names = []
 
         self._handle = None
 
@@ -104,6 +105,7 @@ class Wad(object):
         self.close()
         self.lumps = lumps
         self.lump_name_to_num = { l.name: idx for idx, l in enumerate(self.lumps) }
+        self.lump_names = [l.name for l in self.lumps]
         self._handle = handle
 
     def close(self):
