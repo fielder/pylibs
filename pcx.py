@@ -52,15 +52,22 @@ def loadPCXFromRaw(raw):
     width = header.maxx - header.minx + 1
     height = header.maxy - header.miny + 1
 
-    if  header.manufacturer != 0x0a or \
-        header.version != 5         or \
-        header.encoding != 1        or \
-        header.bpp != 8             or \
-        header.num_planes != 1      or \
-        header.pal_type != 1        or \
-        width <= 0                  or \
-        height <= 0:
-            raise Exception("invalid file")
+    if header.manufacturer != 0x0a:
+        raise Exception("invalid manufacturer 0x%x" % header.manufacturer)
+    if header.version != 5:
+        raise Exception("invalid version 0x%x" % header.version)
+    if header.encoding != 1:
+        raise Exception("invalid encoding 0x%x" % header.encoding)
+    if header.bpp != 8:
+        raise Exception("invalid bpp 0x%x" % header.bpp)
+    if header.num_planes != 1:
+        raise Exception("invalid num_planes 0x%x" % header.num_planes)
+#NOTE: 1 is color/monochrome, 2 is grayscale
+#      this value seems to be useless and some files hold invalid values
+#   if header.pal_type != 1:
+#       raise Exception("invalid pal_type 0x%x" % header.pal_type)
+    if width <= 0 or height <= 0:
+        raise Exception("invalid image dimensions %dx%d" % (width, height))
 
     pixels = ""
     idx = header.DISK_SIZE
