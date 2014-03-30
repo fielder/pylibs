@@ -104,9 +104,18 @@ if __name__ == "__main__":
         print "%d files" % len(p.files)
     else:
         p = Pack(sys.argv[1])
-        for name in sys.argv[2:]:
+
+        if len(sys.argv) >= 3:
+            if sys.argv[2] == "*":
+                names = (f.name for f in p.files)
+            else:
+                names = sys.argv[2:]
+        else:
+            names = []
+
+        for name in names:
             dirs = os.path.dirname(name)
-            if dirs and not os.path.isdir(name):
+            if dirs and not os.path.isdir(dirs):
                 os.makedirs(dirs)
             dat = p.readFile(name)
             fp = open(name, "wb")
