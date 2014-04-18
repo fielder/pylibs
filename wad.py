@@ -6,22 +6,47 @@ import types
 import struct
 
 
-def _pythonifyString(s):
+def chopBytes(b, chunk_len, count=None, start_offset=None):
+    """
+    Run through a string of bytes, yielding consecutive chunks out of
+    it. A starting byte offset can be given.
+    Note the last chunk could be less than chunk_len if the total length
+    isn't a multiple of chunk_len.
+    """
+
+    if start_offset is None:
+        start_offset = 0
+
+    if count is not None:
+        idx = start_offset
+        while count > 0:
+            yield b[idx: idx + chunk_len]
+            idx += chunk_len
+            count -= 1
+    else:
+        idx = start_offset
+        while idx < len(b):
+            yield b[idx: idx + chunk_len]
+            idx += chunk_len
+
+
+def pythonifyString(s):
     """
     Get rid of c-style string terminators.
     """
 
     if "\x00" in s:
         s = s[:s.index("\x00")]
-    return s
+    return s.upper()
 
 
-def _wadifyString(s):
+def wadifyString(s):
     """
     Pad a wad string out to a certain length, padding with empty bytes.
     Note the strings won't necessarily be terminated.
     """
 
+    s = pythonifyString(s)
     if len(s) < 8:
         s += "\x00" * (8 - len(s))
     return s
@@ -49,7 +74,7 @@ def writeWad(path, lumps):
     for offset, (lumpname, lumpdata) in zip(offs, lumps):
         fp.write(struct.pack("<i", offset))
         fp.write(struct.pack("<i", len(lumpdata)))
-        fp.write(_wadifyString(lumpname))
+        fp.write(wadifyString(lumpname))
 
     # header
     fp.seek(0)
@@ -71,7 +96,7 @@ class WadLump(object):
     def __init__(self, raw):
         self.filepos, = struct.unpack("<i", raw[0:4])
         self.size, = struct.unpack("<i", raw[4:8])
-        self.name = _pythonifyString(raw[8:16])
+        self.name = pythonifyString(raw[8:16])
 
 
 class Wad(object):
@@ -132,8 +157,11 @@ class Wad(object):
         else:
             raise Exception("invalid lump \"%s\"" % l)
 
-        self._handle.seek(l.filepos)
-        return self._handle.read(l.size)
+        return self.readBytes(l.filepos, l.size)
+
+    def readBytes(self, offset, count):
+        self._handle.seek(offset)
+        return self._handle.read(count)
 
 
 if __name__ == "__main__":
