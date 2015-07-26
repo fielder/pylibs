@@ -48,6 +48,18 @@ def _sub(a, b):
     return (a - b) % 256
 
 
+def _paeth(a, b, c):
+    p = a + b - c
+    pa = abs(p - a)
+    pb = abs(p - b)
+    pc = abs(p - c)
+    if pa <= pb and pa <= pc:
+        return a
+    elif pb <= pc:
+        return b
+    return c
+
+
 def _filterRow(pixels, width, bpp, y):
     row = pixels[y * width * bpp : (y + 1) * width * bpp]
     left = (b"\x00" * bpp) + row[:-bpp]
@@ -55,6 +67,7 @@ def _filterRow(pixels, width, bpp, y):
         up = b"\x00" * (width * bpp)
     else:
         up = pixels[(y - 1) * width * bpp : y * width * bpp]
+    upleft = (b"\x00" * bpp) + up[:-bpp]
 
     # one entry per filter type; 5 total
     # keyed by the quality of that filter method; lower is better
@@ -77,9 +90,9 @@ def _filterRow(pixels, width, bpp, y):
     enc = bytes((_sub(row[i], int((left[i] + up[i]) / 2)) for i in range(len(row))))
     sums[sum(enc)] = (3, enc)
 
-    # (type 3) paeth
-#   enc = TODO
-#   sums[sum(enc)] = (3, enc)
+    # (type 4) paeth
+    enc = bytes((_sub(row[i], _paeth(left[i], up[i], upleft[i])) for i in range(len(row))))
+    sums[sum(enc)] = (4, enc)
 
     type_, enc = sums[min(sums.keys())]
     return bytes([type_]) + enc
