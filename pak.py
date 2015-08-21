@@ -11,9 +11,9 @@ def _pythonifyString(s):
     Get rid of c-style string terminators.
     """
 
-    if "\x00" in s:
-        s = s[:s.index("\x00")]
-    return s
+    if b"\x00" in s:
+        s = s[:s.index(b"\x00")]
+    return s.decode()
 
 
 class PackFile(object):
@@ -51,15 +51,15 @@ class Pack(object):
     def open(self, path):
         handle = open(path, "rb")
 
-        if handle.read(4) != "PACK":
-            raise Exception("\"%s\" is not a valid pak file" % path)
+        if handle.read(4) != b"PACK":
+            raise Exception("\"{}\" is not a valid pak file".format(path))
 
         dirofs, = struct.unpack("<I", handle.read(4))
         dirlen, = struct.unpack("<I", handle.read(4))
 
         handle.seek(dirofs)
         raw = handle.read(dirlen)
-        files = [PackFile(raw[idx * PackFile.DISK_SIZE:(idx + 1) * PackFile.DISK_SIZE]) for idx in xrange(dirlen / PackFile.DISK_SIZE)]
+        files = [PackFile(raw[idx * PackFile.DISK_SIZE:(idx + 1) * PackFile.DISK_SIZE]) for idx in range(dirlen // PackFile.DISK_SIZE)]
 
         self.close()
         self.files = files
@@ -74,14 +74,14 @@ class Pack(object):
             self._filename_to_file = {}
 
     def readFile(self, f):
-        if type(f) == types.IntType:
+        if isinstance(f, int):
             f = self.files[f]
-        if type(f) == types.StringType:
+        elif isinstance(f, str):
             f = self._filename_to_file[f]
-        elif type(f) == PackFile:
+        elif isinstance(f, PackFile):
             pass
         else:
-            raise Exception("invalid pakfile entry \"%s\"" % f)
+            raise Exception("invalid pakfile entry \"{}\"".format(f))
 
         self._handle.seek(f.filepos)
         return self._handle.read(f.filelen)
@@ -98,10 +98,10 @@ if __name__ == "__main__":
         pass
     elif len(sys.argv) == 2:
         p = Pack(sys.argv[1])
-        print "offset size name"
+        print("offset size name")
         for f in p.files:
-            print f.filepos, f.filelen, f.name
-        print "%d files" % len(p.files)
+            print("{} {} {}".format(f.filepos, f.filelen, f.name))
+        print("{} files".format(len(p.files)))
     else:
         p = Pack(sys.argv[1])
 
@@ -121,4 +121,4 @@ if __name__ == "__main__":
             fp = open(name, "wb")
             fp.write(dat)
             fp.close()
-            print "wrote %d bytes to \"%s\"" % (len(dat), name)
+            print("wrote {} bytes to \"{}\"".format(len(dat), name))
