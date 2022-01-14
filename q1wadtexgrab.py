@@ -33,7 +33,11 @@ if __name__ == "__main__":
     for p in sys.argv[1:]:
         w = wad2.Wad2(p)
 
-        pal = w.readLump("PALETTE")
+        if "PALETTE" in w.lump_names:
+            pal = w.readLump("PALETTE")
+        else:
+            with open("PALETTE", "rb") as fp:
+                pal = fp.read()
 
         def _rgb(i):
             return bytes((pal[i * 3 + 0], pal[i * 3 + 1], pal[i * 3 + 2]))
